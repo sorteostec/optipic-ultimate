@@ -1,0 +1,16 @@
+{
+  "name": "OptiPic Ultimate",
+  "short_name": "OptiPic",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#0b6bcb",
+  "description": "Compresor y conversor de imágenes con marca de agua, 100% local.",
+  "icons": [
+    {
+      "src": "assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
