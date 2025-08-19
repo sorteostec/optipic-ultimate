@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OptiPic Genesis — Editor de Imágenes Profesional</title>
+  <meta name="description" content="Añade marcas de agua de imagen o texto, optimiza, redimensiona y convierte imágenes. Guarda tus ajustes. 100% local y privado." />
+  
+  <!-- Google Fonts: Inter for UI, Material Symbols for Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+
+  <!-- Favicon SVG: A simple, dynamic icon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b6bcb' stroke-width='2'%3E%3Cpath d='M4 14c4 0 6-4 8-4s4 4 8 4M4 18c4 0 6-4 8-4s4 4 8 4'/%3E%3C/svg%3E" type="image/svg+xml">
+  
+  <!-- Tailwind CSS: For rapid, utility-first styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- JSZip Library: To create .zip files for batch downloads -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <script>
+    // Tailwind CSS Configuration: Customizing the framework
+    tailwind.config = {
+      darkMode: 'class', // Enables dark mode based on a class in the HTML tag
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },
+          colors: {
+            primary: '#0b6bcb',
+            'primary-hover': '#0b60b0',
+            surface: '#f3f4f6',       // Light mode background
+            'dark-surface': '#1f2937', // Dark mode card background
+            'dark-bg': '#111827',      // Dark mode main background
+          },
+          keyframes: {
+            pulse: { '0%, 100%': { opacity: 1 }, '50%': { opacity: .5 } }
+          },
+          animation: {
+            pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Styles & Component Definitions inspired by modern UI frameworks */
+    .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary dark:focus-visible:ring-offset-dark-bg; }
+    .btn-filled { @apply bg-primary text-white hover:bg-primary-hover shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:shadow-none dark:disabled:bg-gray-600; }
+    .btn-outlined { @apply border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 disabled:opacity-50; }
+    .form-input { @apply mt-1 block w-full rounded-lg border-gray-300 bg-gray-50 p-2.5 text-sm shadow-sm focus:border-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white; }
+    .label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300; }
+    .card { @apply bg-white border border-gray-200 dark:bg-dark-surface dark:border-gray-700; }
+    .dropzone.dragover { outline: 2px dashed #0b6bcb; background-color: rgba(11, 107, 203, 0.05); }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+    
+    /* Image Comparison Slider: The interactive before/after viewer */
+    .comparison-slider { position: relative; overflow: hidden; }
+    .comparison-slider img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .comparison-slider .after-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+    .comparison-slider .slider-handle { position: absolute; top: 0; left: 50%; width: 4px; height: 100%; background-color: rgba(255, 255, 255, 0.7); cursor: ew-resize; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; }
+    .comparison-slider .slider-handle::after { content: '↔'; color: black; font-weight: bold; background: white; border-radius: 50%; padding: 4px; font-size: 12px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body class="antialiased bg-surface text-gray-800 dark:bg-dark-bg dark:text-gray-200 transition-colors duration-300 flex flex-col min-h-full">
+  
+  <!-- Header: Sticky navigation bar at the top -->
+  <header class="sticky top-0 z-30 backdrop-blur-lg bg-surface/80 dark:bg-dark-bg/80 border-b border-gray-200/80 dark:border-gray-700/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <a class="flex items-center gap-2.5" href="#" aria-label="Inicio">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-primary"><path d="M4 14c4 0 6-4 8-4s4 4 8 4M4 18c4 0 6-4 8-4s4 4 8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="font-semibold text-lg tracking-tight text-gray-900 dark:text-white">OptiPic<span class="text-primary">Genesis</span></span>
+      </a>
+      <div class="flex items-center gap-2">
+        <button id="themeBtn" class="btn btn-outlined !rounded-full !p-2 !px-2" title="Cambiar tema">
+          <span id="themeIcon" class="material-symbols-outlined">light_mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow">
+    <section class="text-center">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 dark:text-white">Suite de Edición de Imágenes Profesional</h1>
+      <p class="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">Añade tu logo, guarda tus ajustes y optimiza en lote. La herramienta definitiva para creadores de contenido.</p>
+    </section>
+
+    <!-- Main App UI: Settings and Dropzone -->
+    <div class="mt-10 p-4 sm:p-8 card rounded-3xl shadow-sm">
+      <div class="grid lg:grid-cols-12 gap-8">
+        <!-- Settings Panel -->
+        <div class="lg:col-span-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-white">Configuración</h2>
+            <div class="flex gap-1">
+              <button id="savePresetBtn" class="btn btn-outlined !p-2 !rounded-full" title="Guardar ajustes actuales"><span class="material-symbols-outlined">save</span></button>
+              <button id="loadPresetBtn" class="btn btn-outlined !p-2 !rounded-full" title="Cargar ajustes guardados"><span class="material-symbols-outlined">settings_backup_restore</span></button>
+            </div>
+          </div>
+          <div class="mt-4 space-y-4">
+            <!-- Optimization Settings (Collapsible) -->
+            <details class="space-y-4" open>
+              <summary class="cursor-pointer font-medium text-gray-800 dark:text-gray-200">Optimización</summary>
+              <div class="pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-4 pt-2">
+                <label class="label">Formato de Salida
+                  <select id="format" class="form-input">
+                    <option value="image/avif">AVIF (Máxima compresión)</option>
+                    <option value="image/webp" selected>WebP (Recomendado)</option>
+                    <option value="image/jpeg">JPEG (Compatible)</option>
+                    <option value="image/png">PNG (Sin pérdida)</option>
+                  </select>
+                </label>
+                <label class="label">Calidad (<span id="qualityVal" class="font-mono">0.80</span>)
+                  <input id="quality" type="range" min="0.1" max="1" step="0.05" value="0.8" class="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
+                </label>
+                <label class="label">Preajustes de Dimensión
+                  <select id="preset" class="form-input">
+                    <option value="custom" selected>Personalizado</option>
+                    <option value="web-hero">Web Hero (1920×1080)</option>
+                    <option value="yt-thumb">YouTube Thumbnail (1280×720)</option>
+                    <option value="ig-post">Instagram Post (1080×1080)</option>
+                    <option value="ig-story">Instagram Story (1080×1920)</option>
+                    <option value="tiktok">TikTok Video (1080×1920)</option>
+                    <option value="pinterest">Pinterest Pin (1000×1500)</option>
+                  </select>
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label class="label">Ancho Máx.
+                    <input id="maxWidth" type="number" min="1" placeholder="Auto" class="form-input" />
+                  </label>
+                  <label class="label">Alto Máx.
+                    <input id="maxHeight" type="number" min="1" placeholder="Auto" class="form-input" />
+                  </label>
+                </div>
+              </div>
+            </details>
+            
+            <!-- Watermark Settings (Collapsible) -->
+            <details class="space-y-4" open>
+              <summary class="cursor-pointer font-medium text-gray-800 dark:text-gray-200">Marca de Agua</summary>
+              <div class="pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-4 pt-2">
+                <div class="flex items-center justify-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+                  <button id="watermarkType-text" class="flex-1 btn !rounded-lg !py-1 bg-white dark:bg-gray-700 shadow-sm">Texto</button>
+                  <button id="watermarkType-image" class="flex-1 btn !rounded-lg !py-1 text-gray-500">Imagen</button>
+                </div>
+                <div id="watermarkSettings-text">
+                  <label class="label">Texto de la marca
+                    <input id="watermarkText" type="text" placeholder="© Tu Nombre" class="form-input" />
+                  </label>
+                </div>
+                <div id="watermarkSettings-image" class="hidden">
+                  <label class="label">Logo / Imagen de marca
+                    <input id="watermarkImage" type="file" accept="image/png, image/svg+xml" class="form-input file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
+                  </label>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <label class="label">Color (texto)
+                    <input id="watermarkColor" type="color" value="#FFFFFF" class="form-input !p-1 h-10" />
+                  </label>
+                  <label class="label">Opacidad
+                    <input id="watermarkOpacity" type="range" min="0.1" max="1" step="0.1" value="0.7" class="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
+                  </label>
+                </div>
+                <label class="label">Posición
+                  <select id="watermarkPosition" class="form-input">
+                    <option value="bottom-right">Abajo Derecha</option>
+                    <option value="bottom-left">Abajo Izquierda</option>
+                    <option value="top-right">Arriba Derecha</option>
+                    <option value="top-left">Arriba Izquierda</option>
+                    <option value="center">Centro</option>
+                  </select>
+                </label>
+                 <label class="label flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" id="watermarkTiling" class="w-4 h-4 rounded text-primary focus:ring-primary focus:ring-2" />
+                  <span>Repetir marca (mosaico)</span>
+                </label>
+              </div>
+            </details>
+          </div>
+        </div>
+        <!-- Dropzone for file input -->
+        <div class="lg:col-span-8">
+          <div id="dropzone" class="dropzone relative h-full min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-6 text-center transition-colors">
+            <input id="fileInput" type="file" accept="image/*" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            <div class="pointer-events-none">
+              <span class="material-symbols-outlined text-6xl text-gray-400">upload_file</span>
+              <p class="mt-2 font-medium text-gray-700 dark:text-gray-300">Arrastra tus imágenes aquí</p>
+              <p class="text-sm text-gray-500">o <span class="text-primary font-semibold">haz clic para seleccionar</span></p>
+              <p class="text-xs text-gray-500 mt-2">También puedes pegar desde el portapapeles (<kbd class="font-sans border rounded-md px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 dark:border-gray-600">Ctrl/⌘+V</kbd>)</p>
+            </div>
+          </div>
+          <div id="compatNotice" class="hidden mt-4 p-3 rounded-lg border text-sm bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Results Section: Where processed images appear -->
+    <section class="mt-12">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-white">Resultados (<span id="countBadge">0</span>)</h2>
+            <div class="flex items-center gap-2">
+                <span id="savingsBadge" class="text-sm font-medium text-green-600 dark:text-green-500 mr-2"></span>
+                <button id="downloadAllBtn" class="btn btn-filled" disabled>
+                    <span class="material-symbols-outlined text-base">folder_zip</span>Descargar todo (.zip)
+                </button>
+                <button id="clearBtn" class="btn btn-outlined" disabled>
+                    <span class="material-symbols-outlined text-base">delete_sweep</span>Limpiar todo
+                </button>
+            </div>
+        </div>
+        <div id="results" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+        <div id="emptyState" class="text-center py-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl">
+            <span class="material-symbols-outlined text-6xl text-gray-400">image_search</span>
+            <p class="mt-4 font-medium text-gray-700 dark:text-gray-300">Tus imágenes optimizadas aparecerán aquí</p>
+            <p class="text-sm text-gray-500">Añade archivos para empezar la magia</p>
+        </div>
+    </section>
+  </main>
+  
+  <!-- Footer: Contains contact info and credits -->
+  <footer class="mt-12 border-t border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+      <p>Un proyecto de <a href="https://github.com/sorteostec/" target="_blank" rel="noopener nofollow" class="text-primary hover:underline font-semibold">sorteostec</a> en GitHub. ¿Sugerencias? <a href="mailto:sorteos.tecnologicos.sl@gmail.com" class="text-primary hover:underline">¡Escríbenos!</a></p>
+      <p class="mt-1">Creado con ❤️ por Gemini. Todos los procesos son locales en tu navegador.</p>
+    </div>
+  </footer>
+
+  <!-- HTML Templates for dynamically generated content -->
+  <template id="loadingCardTemplate">
+    <div class="card rounded-xl shadow-sm overflow-hidden animate-pulse">
+      <div class="aspect-video bg-gray-200 dark:bg-gray-700"></div>
+      <div class="p-4 space-y-3">
+        <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+        <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="resultCardTemplate">
+    <div class="card rounded-xl shadow-sm overflow-hidden group">
+      <div class="comparison-slider aspect-video bg-gray-100 dark:bg-gray-800">
+        <img class="before-image" loading="lazy" alt="Imagen original"/>
+        <div class="after-image">
+          <img class="processed-image" loading="lazy" alt="Imagen procesada"/>
+        </div>
+        <div class="slider-handle"></div>
+      </div>
+      <div class="p-3">
+        <div class="flex justify-between items-start gap-2">
+            <h3 class="font-medium text-sm truncate" title="filename">filename.jpg</h3>
+            <div class="flex items-center -mt-1.5">
+              <button class="copy-btn btn !p-1.5 !rounded-full !px-1.5" title="Copiar al portapapeles">
+                  <span class="material-symbols-outlined text-base">content_copy</span>
+              </button>
+              <a href="#" download="#" class="download-link btn !p-1.5 !rounded-full !px-1.5" title="Descargar esta imagen">
+                  <span class="material-symbols-outlined text-base">download</span>
+              </a>
+            </div>
+        </div>
+        <div class="text-xs text-gray-500 mt-1 flex justify-between items-center">
+          <span class="size-info"></span>
+          <span class="savings-badge font-bold text-green-600 dark:text-green-500 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/50"></span>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Web Worker Script: All heavy processing happens here, off the main thread -->
+  <script id="worker" type="javascript/worker">
+    /**
+     * Draws the watermark onto the canvas context. Can handle both text and image watermarks.
+     * @param {CanvasRenderingContext2D} ctx - The canvas context to draw on.
+     * @param {number} width - The width of the canvas.
+     * @param {number} height - The height of the canvas.
+     * @param {object} options - Watermark configuration.
+     */
+    async function drawWatermark(ctx, width, height, options) {
+        if (!options.text && !options.image) return;
+
+        ctx.globalAlpha = options.opacity;
+        
+        if (options.tiling) {
+            // Tiling logic for repeating watermark
+            const patternCanvas = new OffscreenCanvas(150, 100);
+            const pCtx = patternCanvas.getContext('2d');
+            pCtx.globalAlpha = options.opacity;
+
+            if (options.image) {
+                const wmBmp = await createImageBitmap(options.image);
+                pCtx.drawImage(wmBmp, 25, 25, 100, 50);
+            } else {
+                pCtx.fillStyle = options.color;
+                pCtx.font = '12px sans-serif';
+                pCtx.textAlign = 'center';
+                pCtx.textBaseline = 'middle';
+                pCtx.fillText(options.text, 75, 50);
+            }
+            
+            ctx.fillStyle = ctx.createPattern(patternCanvas, 'repeat');
+            ctx.fillRect(0, 0, width, height);
+
+        } else {
+            // Single placement logic
+            if (options.image) {
+                const wmBmp = await createImageBitmap(options.image);
+                const wmWidth = Math.min(width, height) * 0.25; // Watermark is 25% of the smallest image dimension
+                const wmRatio = wmBmp.width / wmBmp.height;
+                const wmHeight = wmWidth / wmRatio;
+                
+                const pos = getPosition(width, height, wmWidth, wmHeight);
+                ctx.drawImage(wmBmp, pos.x, pos.y, wmWidth, wmHeight);
+            } else {
+                const padding = Math.min(width, height) * 0.05;
+                const fontSize = Math.min(width, height) * 0.05;
+                ctx.font = `bold ${fontSize}px sans-serif`;
+                ctx.fillStyle = options.color;
+                
+                const textMetrics = ctx.measureText(options.text);
+                const pos = getPosition(width, height, textMetrics.width, fontSize, padding);
+                
+                ctx.textAlign = pos.textAlign;
+                ctx.textBaseline = pos.textBaseline;
+                ctx.fillText(options.text, pos.x, pos.y);
+            }
+        }
+    }
+
+    function getPosition(cw, ch, w, h, p = 0) {
+        let pos = { x: p, y: ch - h - p, textAlign: 'start', textBaseline: 'alphabetic' };
+        if (p === 0) p = Math.min(cw, ch) * 0.05; // Padding for image watermark
+
+        switch (options.position) {
+            case 'bottom-right': pos = { x: cw - p, y: ch - p, textAlign: 'end', textBaseline: 'bottom' }; break;
+            case 'bottom-left':  pos = { x: p, y: ch - p, textAlign: 'start', textBaseline: 'bottom' }; break;
+            case 'top-right':    pos = { x: cw - p, y: p, textAlign: 'end', textBaseline: 'top' }; break;
+            case 'top-left':     pos = { x: p, y: p, textAlign: 'start', textBaseline: 'top' }; break;
+            case 'center':       pos = { x: cw / 2, y: ch / 2, textAlign: 'center', textBaseline: 'middle' }; break;
+        }
+        return pos;
+    }
+
+    async function convertImage(file, opts) {
+      try {
+        const bmp = await createImageBitmap(file);
+        const originalUrl = URL.createObjectURL(file);
+        options = opts; // Make options globally available in worker scope for getPosition
+
+        const ratio = Math.min(options.maxWidth / bmp.width || 1, options.maxHeight / bmp.height || 1, 1);
+        const width = Math.round(bmp.width * ratio);
+        const height = Math.round(bmp.height * ratio);
+
+        const canvas = new OffscreenCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bmp, 0, 0, width, height);
+        
+        await drawWatermark(ctx, width, height, options.watermark);
+        
+        bmp.close();
+        
+        const blob = await canvas.convertToBlob({ type: options.fmt, quality: options.q });
+        const url = URL.createObjectURL(blob);
+        
+        postMessage({
+          status: 'success',
+          payload: { id: options.id, blob, url, originalUrl, originalSize: file.size, originalName: file.name }
+        });
+      } catch (error) {
+        postMessage({
+          status: 'error',
+          payload: { id: options.id, message: error.message, name: file.name }
+        });
+      }
+    }
+    
+    let options = {};
+    self.onmessage = (e) => convertImage(e.data.file, e.data.options);
+  </script>
+
+  <!-- Main Application Logic (Client-Side) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const els = {
+        fileInput: document.getElementById('fileInput'), dropzone: document.getElementById('dropzone'),
+        results: document.getElementById('results'), emptyState: document.getElementById('emptyState'),
+        quality: document.getElementById('quality'), qualityVal: document.getElementById('qualityVal'),
+        format: document.getElementById('format'), maxWidth: document.getElementById('maxWidth'),
+        maxHeight: document.getElementById('maxHeight'), preset: document.getElementById('preset'),
+        compatNotice: document.getElementById('compatNotice'), downloadAllBtn: document.getElementById('downloadAllBtn'),
+        clearBtn: document.getElementById('clearBtn'), countBadge: document.getElementById('countBadge'),
+        savingsBadge: document.getElementById('savingsBadge'), themeBtn: document.getElementById('themeBtn'),
+        themeIcon: document.getElementById('themeIcon'), loadingCardTemplate: document.getElementById('loadingCardTemplate'),
+        resultCardTemplate: document.getElementById('resultCardTemplate'),
+        watermarkText: document.getElementById('watermarkText'), watermarkColor: document.getElementById('watermarkColor'),
+        watermarkOpacity: document.getElementById('watermarkOpacity'), watermarkPosition: document.getElementById('watermarkPosition'),
+        watermarkImage: document.getElementById('watermarkImage'), watermarkTiling: document.getElementById('watermarkTiling'),
+        watermarkTypeText: document.getElementById('watermarkType-text'), watermarkTypeImage: document.getElementById('watermarkType-image'),
+        watermarkSettingsText: document.getElementById('watermarkSettings-text'), watermarkSettingsImage: document.getElementById('watermarkSettings-image'),
+        savePresetBtn: document.getElementById('savePresetBtn'), loadPresetBtn: document.getElementById('loadPresetBtn'),
+      };
+
+      let processedFiles = new Map(), fileCounter = 0, imageWorker, watermarkFile = null;
+
+      function init() {
+        setupEventListeners();
+        checkCompatibility();
+        setupWorker();
+        loadPreset(false); // Load saved preset on startup silently
+      }
+
+      function setupWorker() {
+        const workerBlob = new Blob([document.getElementById('worker').textContent], { type: 'text/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+        imageWorker = new Worker(workerUrl);
+        imageWorker.onmessage = (e) => {
+          const { status, payload } = e.data;
+          status === 'success' ? handleProcessedFile(payload) : handleProcessingError(payload);
+        };
+      }
+      
+      function updateTheme(isDark) {
+        document.documentElement.classList.toggle('dark', isDark);
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        els.themeIcon.textContent = isDark ? 'dark_mode' : 'light_mode';
+      }
+
+      function setupEventListeners() {
+        els.themeBtn.addEventListener('click', () => updateTheme(!document.documentElement.classList.contains('dark')));
+        els.quality.addEventListener('input', () => els.qualityVal.textContent = Number(els.quality.value).toFixed(2));
+        els.preset.addEventListener('change', applyPreset);
+        
+        els.fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        const dzEvents = ['dragenter', 'dragover', 'dragleave', 'drop'];
+        dzEvents.forEach(name => els.dropzone.addEventListener(name, preventDefaults, false));
+        els.dropzone.addEventListener('dragenter', () => els.dropzone.classList.add('dragover'));
+        els.dropzone.addEventListener('dragleave', () => els.dropzone.classList.remove('dragover'));
+        els.dropzone.addEventListener('drop', (e) => {
+          els.dropzone.classList.remove('dragover');
+          handleFiles(e.dataTransfer.files);
+        });
+        window.addEventListener('paste', handlePaste);
+        
+        els.clearBtn.addEventListener('click', clearAll);
+        els.downloadAllBtn.addEventListener('click', downloadAll);
+        els.results.addEventListener('click', handleResultCardClick);
+
+        // Watermark UI
+        els.watermarkTypeText.addEventListener('click', () => switchWatermarkType('text'));
+        els.watermarkTypeImage.addEventListener('click', () => switchWatermarkType('image'));
+        els.watermarkImage.addEventListener('change', (e) => { watermarkFile = e.target.files[0]; });
+
+        // Preset buttons
+        els.savePresetBtn.addEventListener('click', savePreset);
+        els.loadPresetBtn.addEventListener('click', () => loadPreset(true));
+      }
+
+      function switchWatermarkType(type) {
+        const isText = type === 'text';
+        els.watermarkSettingsText.classList.toggle('hidden', !isText);
+        els.watermarkSettingsImage.classList.toggle('hidden', isText);
+        els.watermarkTypeText.classList.toggle('bg-white', isText);
+        els.watermarkTypeText.classList.toggle('dark:bg-gray-700', isText);
+        els.watermarkTypeText.classList.toggle('shadow-sm', isText);
+        els.watermarkTypeText.classList.toggle('text-gray-500', !isText);
+        els.watermarkTypeImage.classList.toggle('bg-white', !isText);
+        els.watermarkTypeImage.classList.toggle('dark:bg-gray-700', !isText);
+        els.watermarkTypeImage.classList.toggle('shadow-sm', !isText);
+        els.watermarkTypeImage.classList.toggle('text-gray-500', isText);
+        els.watermarkColor.disabled = !isText;
+      }
+
+      function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+      function handleFiles(files) {
+        const imageFiles = Array.from(files).filter(f => f && f.type?.startsWith('image/'));
+        if (!imageFiles.length) return;
+        
+        els.emptyState.style.display = 'none';
+        
+        const options = {
+          fmt: els.format.value, q: Number(els.quality.value),
+          maxWidth: parseInt(els.maxWidth.value, 10) || null,
+          maxHeight: parseInt(els.maxHeight.value, 10) || null,
+          watermark: {
+            text: els.watermarkText.value, color: els.watermarkColor.value,
+            opacity: Number(els.watermarkOpacity.value), position: els.watermarkPosition.value,
+            tiling: els.watermarkTiling.checked, image: watermarkFile
+          }
+        };
+
+        imageFiles.forEach(file => {
+          const id = `file-${fileCounter++}`;
+          renderLoadingCard(id);
+          imageWorker.postMessage({ file, options: { ...options, id } });
+        });
+      }
+      
+      function handlePaste(e) {
+        const files = Array.from(e.clipboardData?.items || []).filter(i => i.type.startsWith('image/')).map(i => i.getAsFile());
+        if (files.length) { preventDefaults(e); handleFiles(files); }
+      }
+
+      function handleProcessedFile(payload) {
+        const { id, blob, url, originalUrl, originalName, originalSize } = payload;
+        const name = renameFile(originalName, blob.type);
+        const result = { id, name, blob, url, originalUrl, before: originalSize, after: blob.size };
+        processedFiles.set(id, result);
+        renderResultCard(result);
+        updateStats();
+      }
+
+      function handleProcessingError({ id, message, name }) {
+        console.error(`Error processing ${name}: ${message}`);
+        const card = document.getElementById(id);
+        if (card) {
+          card.classList.remove('animate-pulse');
+          card.innerHTML = `<div class="p-4 text-center text-red-500"><span class="material-symbols-outlined text-3xl">error</span><p class="font-bold mt-1">Error al procesar</p><p class="text-xs truncate" title="${name}">${name}</p></div>`;
+          card.classList.add('border', 'border-red-500');
+        }
+      }
+
+      function renderLoadingCard(id) {
+        const tpl = els.loadingCardTemplate.content.cloneNode(true);
+        tpl.firstElementChild.id = id;
+        els.results.prepend(tpl.firstElementChild);
+      }
+
+      function renderResultCard(result) {
+        const card = document.getElementById(result.id);
+        if (!card) return;
+        const tpl = els.resultCardTemplate.content.cloneNode(true);
+        const savings = Math.round((1 - result.after / result.before) * 100);
+        tpl.querySelector('.before-image').src = result.originalUrl;
+        tpl.querySelector('.processed-image').src = result.url;
+        tpl.querySelector('[title="filename"]').textContent = result.name;
+        tpl.querySelector('[title="filename"]').title = result.name;
+        tpl.querySelector('.size-info').textContent = `${readableBytes(result.before)} → ${readableBytes(result.after)}`;
+        tpl.querySelector('.savings-badge').textContent = `${savings}%`;
+        tpl.querySelector('.download-link').href = result.url;
+        tpl.querySelector('.download-link').download = result.name;
+        tpl.querySelector('.copy-btn').dataset.fileId = result.id;
+        card.classList.remove('animate-pulse');
+        card.innerHTML = '';
+        card.appendChild(tpl);
+        setupComparisonSlider(card.querySelector('.comparison-slider'));
+      }
+
+      function setupComparisonSlider(slider) {
+        const handle = slider.querySelector('.slider-handle'), afterImage = slider.querySelector('.after-image');
+        let isDragging = false;
+        const moveHandler = (x) => {
+            const rect = slider.getBoundingClientRect();
+            let pos = (x - rect.left) / rect.width * 100;
+            pos = Math.max(0, Math.min(100, pos));
+            handle.style.left = `${pos}%`;
+            afterImage.style.clipPath = `polygon(${pos}% 0, 100% 0, 100% 100%, ${pos}% 100%)`;
+        };
+        const startDrag = () => { isDragging = true; }, endDrag = () => { isDragging = false; };
+        handle.addEventListener('mousedown', startDrag); document.addEventListener('mouseup', endDrag);
+        document.addEventListener('mousemove', (e) => { if (isDragging) moveHandler(e.clientX); });
+        handle.addEventListener('touchstart', startDrag, { passive: true }); document.addEventListener('touchend', endDrag);
+        document.addEventListener('touchmove', (e) => { if (isDragging) moveHandler(e.touches[0].clientX); }, { passive: true });
+      }
+
+      function clearAll() {
+        processedFiles.forEach(p => { URL.revokeObjectURL(p.url); URL.revokeObjectURL(p.originalUrl); });
+        processedFiles.clear();
+        els.results.innerHTML = '';
+        els.emptyState.style.display = 'block';
+        updateStats();
+      }
+      
+      async function downloadAll() {
+        if (!processedFiles.size || typeof JSZip === 'undefined') return;
+        const zip = new JSZip();
+        processedFiles.forEach(p => zip.file(p.name, p.blob));
+        els.downloadAllBtn.disabled = true;
+        const originalText = els.downloadAllBtn.innerHTML;
+        els.downloadAllBtn.innerHTML = `<span class="material-symbols-outlined text-base animate-spin">hourglass_top</span>Comprimiendo...`;
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `optipic-genesis_${Date.now()}.zip`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        els.downloadAllBtn.innerHTML = originalText;
+        updateStats();
+      }
+
+      async function handleResultCardClick(e) {
+        const copyBtn = e.target.closest('.copy-btn');
+        if (!copyBtn) return;
+        const fileId = copyBtn.dataset.fileId, fileData = processedFiles.get(fileId);
+        if (!fileData) return;
+        try {
+          await navigator.clipboard.write([ new ClipboardItem({ [fileData.blob.type]: fileData.blob }) ]);
+          const icon = copyBtn.querySelector('.material-symbols-outlined');
+          icon.textContent = 'check';
+          setTimeout(() => { icon.textContent = 'content_copy'; }, 2000);
+        } catch (err) {
+          console.error('Failed to copy image: ', err);
+          const icon = copyBtn.querySelector('.material-symbols-outlined');
+          icon.textContent = 'error';
+          setTimeout(() => { icon.textContent = 'content_copy'; }, 2000);
+        }
+      }
+
+      function updateStats() {
+        const count = processedFiles.size;
+        els.countBadge.textContent = count;
+        els.downloadAllBtn.disabled = count === 0;
+        els.clearBtn.disabled = count === 0;
+        if (count > 0) {
+            const totalBefore = Array.from(processedFiles.values()).reduce((sum, p) => sum + p.before, 0);
+            const totalAfter = Array.from(processedFiles.values()).reduce((sum, p) => sum + p.after, 0);
+            const savingsPercent = totalBefore > 0 ? Math.round((1 - totalAfter / totalBefore) * 100) : 0;
+            els.savingsBadge.textContent = `Ahorro total: ${savingsPercent}% (${readableBytes(totalBefore - totalAfter)})`;
+        } else {
+            els.savingsBadge.textContent = '';
+        }
+      }
+
+      function readableBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(1))} ${['B', 'KB', 'MB'][i]}`;
+      }
+
+      function renameFile(filename, mimeType) {
+        const extMap = { 'image/avif': 'avif', 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
+        const name = filename.substring(0, filename.lastIndexOf('.')) || 'image';
+        return `${name}.${extMap[mimeType] || 'img'}`;
+      }
+
+      function applyPreset() {
+        const presets = { 'web-hero': { w: 1920, h: 1080 }, 'yt-thumb': { w: 1280, h: 720 }, 'ig-post': { w: 1080, h: 1080 }, 'ig-story': { w: 1080, h: 1920 }, 'tiktok': { w: 1080, h: 1920 }, 'pinterest': { w: 1000, h: 1500 } };
+        const preset = presets[els.preset.value];
+        els.maxWidth.value = preset?.w || '';
+        els.maxHeight.value = preset?.h || '';
+      }
+
+      function checkCompatibility() {
+        try {
+            new OffscreenCanvas(1, 1).getContext('2d').convertToBlob();
+        } catch (e) {
+            document.querySelector('#format option[value="image/avif"]').disabled = true;
+            if (els.format.value === 'image/avif') {
+                els.format.value = 'image/webp';
+                els.compatNotice.textContent = 'Tu navegador no soporta AVIF, se usará WebP.';
+                els.compatNotice.classList.remove('hidden');
+            }
+        }
+      }
+
+      function savePreset() {
+        const presetData = {
+          format: els.format.value, quality: els.quality.value,
+          maxWidth: els.maxWidth.value, maxHeight: els.maxHeight.value,
+          preset: els.preset.value, watermarkText: els.watermarkText.value,
+          watermarkColor: els.watermarkColor.value, watermarkOpacity: els.watermarkOpacity.value,
+          watermarkPosition: els.watermarkPosition.value, watermarkTiling: els.watermarkTiling.checked,
+        };
+        localStorage.setItem('optipicPreset', JSON.stringify(presetData));
+        
+        const icon = els.savePresetBtn.querySelector('.material-symbols-outlined');
+        icon.textContent = 'check_circle';
+        setTimeout(() => { icon.textContent = 'save'; }, 2000);
+      }
+
+      function loadPreset(showAlert = true) {
+        const saved = localStorage.getItem('optipicPreset');
+        if (saved) {
+          const presetData = JSON.parse(saved);
+          els.format.value = presetData.format; els.quality.value = presetData.quality;
+          els.maxWidth.value = presetData.maxWidth; els.maxHeight.value = presetData.maxHeight;
+          els.preset.value = presetData.preset; els.watermarkText.value = presetData.watermarkText;
+          els.watermarkColor.value = presetData.watermarkColor; els.watermarkOpacity.value = presetData.watermarkOpacity;
+          els.watermarkPosition.value = presetData.watermarkPosition; els.watermarkTiling.checked = presetData.watermarkTiling;
+          els.qualityVal.textContent = Number(els.quality.value).toFixed(2);
+
+          if (showAlert) {
+            const icon = els.loadPresetBtn.querySelector('.material-symbols-outlined');
+            icon.textContent = 'check_circle';
+            setTimeout(() => { icon.textContent = 'settings_backup_restore'; }, 2000);
+          }
+        } else if (showAlert) {
+            alert('No hay ajustes guardados.');
+        }
+      }
+      
+      // Start the application
+      init();
+    });
+  </script>
+</body>
+</html>
